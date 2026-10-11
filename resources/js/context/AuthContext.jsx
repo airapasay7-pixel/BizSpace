@@ -36,10 +36,13 @@ export function AuthProvider({ children }) {
         setUser(res.data.data);
     }, []);
 
-    const logout = useCallback(async () => {
+    // beforeClear runs after the server confirmed the logout but before local state is cleared,
+    // so the caller can leave the private area without the route guard bouncing to /login.
+    const logout = useCallback(async (beforeClear) => {
         try {
             await http.post('/logout');
         } finally {
+            beforeClear?.();
             setUser(null);
         }
     }, []);

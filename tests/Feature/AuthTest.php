@@ -95,6 +95,14 @@ class AuthTest extends TestCase
         $this->postJson('/api/logout')->assertUnauthorized();
     }
 
+    public function test_csrf_endpoint_returns_the_session_token(): void
+    {
+        $response = $this->getJson('/api/csrf')->assertOk();
+
+        $this->assertSame(session()->token(), $response->json('token'));
+        $this->assertNotEmpty($response->json('token'));
+    }
+
     public function test_guest_gets_json_401_even_without_a_json_accept_header(): void
     {
         // e.g. opening /api/user directly in the browser address bar.

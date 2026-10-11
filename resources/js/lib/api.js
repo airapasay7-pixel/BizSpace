@@ -2,20 +2,24 @@ import axios from 'axios';
 
 /**
  * Same-origin Sanctum SPA client. Authentication lives in the HTTP-only session
- * cookie; the only thing JS handles is the (non-secret) XSRF token that axios
- * copies from the XSRF-TOKEN cookie into the X-XSRF-TOKEN header.
+ * cookie. The CSRF token is fetched from `/api/csrf` and sent as X-CSRF-TOKEN; the
+ * XSRF-TOKEN cookie is deliberately not used, because another app on the same parent
+ * domain can set a cookie with that name and shadow ours.
  */
 export const http = axios.create({
     baseURL: '/api',
     withCredentials: true,
-    withXSRFToken: true,
+    withXSRFToken: false,
     headers: {
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     },
 });
 
-export const fetchCsrfCookie = () => axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+export async function fetchCsrfCookie() {
+    const res = await http.get('/csrf');
+    http.defaults.headers.common['X-CSRF-TOKEN'] = res.data.token;
+}
 
 let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (fn) => {
@@ -31,6 +35,7 @@ http.interceptors.response.use(
         if (response?.status === 419 && config && !config.__retried) {
             config.__retried = true;
             await fetchCsrfCookie();
+            config.headers['X-CSRF-TOKEN'] = http.defaults.headers.common['X-CSRF-TOKEN'];
             return http(config);
         }
 

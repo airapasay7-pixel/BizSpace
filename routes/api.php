@@ -6,6 +6,10 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
+// The SPA reads its CSRF token from here instead of the XSRF-TOKEN cookie, so a cookie of the
+// same name set by another app on a shared parent domain cannot break it. Same-origin only.
+Route::get('/csrf', fn () => response()->json(['token' => csrf_token()]));
+
 // Guest-only: authenticated users have no reason to hit these, and throttling limits brute force.
 Route::middleware(['guest:web', 'throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

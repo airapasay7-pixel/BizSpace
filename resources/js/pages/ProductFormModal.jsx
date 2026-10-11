@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { TextAreaField, TextField } from '@/components/forms';
 import { Modal } from '@/components/Modal';
@@ -26,30 +26,46 @@ function validate(form) {
     return errors;
 }
 
+const toForm = (product) =>
+    product
+        ? {
+              name: product.name,
+              description: product.description ?? '',
+              category: product.category,
+              price: String(product.price),
+              quantity: String(product.quantity),
+          }
+        : empty;
+
 /** Create (product = null) or edit an existing product. */
 export default function ProductFormModal({ open, product, categories, onClose, onSaved }) {
-    const [form, setForm] = useState(empty);
-    const [errors, setErrors] = useState({});
-    const [message, setMessage] = useState('');
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        if (!open) return;
-        setErrors({});
-        setMessage('');
-        setSaving(false);
-        setForm(
-            product
-                ? {
-                      name: product.name,
-                      description: product.description ?? '',
-                      category: product.category,
-                      price: String(product.price),
-                      quantity: String(product.quantity),
-                  }
-                : empty,
-        );
-    }, [open, product]);
+    return (
+        <Modal
+            open={open}
+            onClose={saving ? () => {} : onClose}
+            title={product ? 'Edit product' : 'Add product'}
+            description={product ? 'Update the details of this product.' : 'Add a product to your workspace.'}
+        >
+            {/* Mounted fresh on every open, so the fields start with the right values. */}
+            <ProductForm
+                key={product?.id ?? 'new'}
+                product={product}
+                categories={categories}
+                saving={saving}
+                setSaving={setSaving}
+                onClose={onClose}
+                onSaved={onSaved}
+            />
+        </Modal>
+    );
+}
+
+function ProductForm({ product, categories, saving, setSaving, onClose, onSaved }) {
+    const [form, setForm] = useState(() => toForm(product));
+    const [errors, setErrors] = useState({});
+    const [message, setMessage] = useState('');
 
     const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
 
@@ -73,6 +89,7 @@ export default function ProductFormModal({ open, product, categories, onClose, o
             const res = product
                 ? await http.put(`/products/${product.id}`, body)
                 : await http.post('/products', body);
+            setSaving(false);
             onSaved(res.data.data, Boolean(product));
         } catch (error) {
             const parsed = parseError(error);
@@ -83,65 +100,58 @@ export default function ProductFormModal({ open, product, categories, onClose, o
     };
 
     return (
-        <Modal
-            open={open}
-            onClose={saving ? () => {} : onClose}
-            title={product ? 'Edit product' : 'Add product'}
-            description={product ? 'Update the details of this product.' : 'Add a product to your workspace.'}
-        >
-            <form onSubmit={submit} className="space-y-4" noValidate>
-                <Alert>{message}</Alert>
-                <TextField label="Product name" value={form.name} onChange={set('name')} error={errors.name} maxLength={255} />
-                <TextAreaField
-                    label="Description (optional)"
-                    value={form.description}
-                    onChange={set('description')}
-                    error={errors.description}
-                    maxLength={5000}
+        <form onSubmit={submit} className="space-y-4" noValidate>
+            <Alert>{message}</Alert>
+            <TextField label="Product name" value={form.name} onChange={set('name')} error={errors.name} maxLength={255} />
+            <TextAreaField
+                label="Description (optional)"
+                value={form.description}
+                onChange={set('description')}
+                error={errors.description}
+                maxLength={5000}
+            />
+            <div>
+                <TextField
+                    label="Category"
+                    value={form.category}
+                    onChange={set('category')}
+                    error={errors.category}
+                    list="category-options"
+                    maxLength={100}
+                    autoComplete="off"
                 />
-                <div>
-                    <TextField
-                        label="Category"
-                        value={form.category}
-                        onChange={set('category')}
-                        error={errors.category}
-                        list="category-options"
-                        maxLength={100}
-                        autoComplete="off"
-                    />
-                    <datalist id="category-options">
-                        {categories.map((c) => (
-                            <option key={c} value={c} />
-                        ))}
-                    </datalist>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <TextField
-                        label="Price (USD)"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={form.price}
-                        onChange={set('price')}
-                        error={errors.price}
-                    />
-                    <TextField
-                        label="Stock quantity"
-                        inputMode="numeric"
-                        placeholder="0"
-                        value={form.quantity}
-                        onChange={set('quantity')}
-                        error={errors.quantity}
-                    />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="secondary" onClick={onClose} disabled={saving}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" loading={saving}>
-                        {product ? 'Save changes' : 'Add product'}
-                    </Button>
-                </div>
-            </form>
-        </Modal>
+                <datalist id="category-options">
+                    {categories.map((c) => (
+                        <option key={c} value={c} />
+                    ))}
+                </datalist>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                    label="Price (USD)"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={form.price}
+                    onChange={set('price')}
+                    error={errors.price}
+                />
+                <TextField
+                    label="Stock quantity"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={form.quantity}
+                    onChange={set('quantity')}
+                    error={errors.quantity}
+                />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={onClose} disabled={saving}>
+                    Cancel
+                </Button>
+                <Button type="submit" loading={saving}>
+                    {product ? 'Save changes' : 'Add product'}
+                </Button>
+            </div>
+        </form>
     );
 }

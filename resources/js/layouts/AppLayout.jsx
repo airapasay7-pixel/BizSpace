@@ -69,10 +69,8 @@ export default function AppLayout() {
     useEffect(() => setDrawerOpen(false), [location.pathname]);
 
     const handleLogout = async () => {
-        // Leave the private area first so the route guard doesn't bounce us to /login.
-        navigate('/', { replace: true });
         try {
-            await logout();
+            await logout(() => navigate('/', { replace: true }));
         } catch {
             toast.error('Logout could not be completed on the server, but you have been signed out here.');
         }

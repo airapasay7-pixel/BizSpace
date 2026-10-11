@@ -149,8 +149,7 @@ export default function Profile() {
 
     const handleLogout = async () => {
         setLoggingOut(true);
-        navigate('/', { replace: true });
-        await logout().catch(() => {});
+        await logout(() => navigate('/', { replace: true })).catch(() => {});
     };
 
     return (

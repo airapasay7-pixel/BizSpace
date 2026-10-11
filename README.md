@@ -111,8 +111,11 @@ APP_URL=https://your-domain.example
 DB_*=<dedicated MySQL user with a strong password>
 SANCTUM_STATEFUL_DOMAINS=your-domain.example
 SESSION_SECURE_COOKIE=true
-SESSION_DOMAIN=your-domain.example
+SESSION_DOMAIN=null
 ```
+
+Keep `SESSION_DOMAIN=null` (host-only cookies). If you change it after users have visited, browsers hold both
+cookie variants and every login fails with `419 CSRF token mismatch` until cookies are cleared.
 
 4. Make `storage/` and `bootstrap/cache/` writable by the web server user.
 5. Behind a reverse proxy or load balancer, configure trusted proxies so Laravel sees HTTPS.
